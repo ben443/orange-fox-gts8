@@ -26,7 +26,7 @@ jobs:
           # Save manifest for repo init
           cp $GITHUB_WORKSPACE/manifest.xml .
           # Initialize repo with your manifest
-          repo init -u . -m manifest.xml
+          repo init -u https://github.com/ben443/orange-fox-gts8.git -m manifest.xml
           repo sync -c --no-tags --no-clone-bundle -j$(nproc --all)
 
       - name: Build kernel/recovery
