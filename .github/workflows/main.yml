@@ -1,0 +1,47 @@
+name: Build Recovery for Galaxy Tab S8 (gts8, SM8450, 5.10 GKI)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git curl repo bc build-essential \
+            gcc g++ python3 python3-pip openjdk-8-jdk \
+            libssl-dev liblz4-tool zip unzip rsync flex bison \
+            cpio libncurses5-dev libncurses-dev \
+            python-is-python3
+
+      - name: Set up repo and sync sources
+        run: |
+          mkdir workspace && cd workspace
+          # Save manifest for repo init
+          cp $GITHUB_WORKSPACE/manifest.xml .
+          # Initialize repo with your manifest
+          repo init -u . -m manifest.xml
+          repo sync -c --no-tags --no-clone-bundle -j$(nproc --all)
+
+      - name: Build kernel/recovery
+        run: |
+          cd workspace/kernel_platform/msm-kernel
+          # If you need to use a specific build config:
+          export BUILD_CONFIG=../../common/build.config.msm.waipio
+          cd ../build
+          # Start the build using the standard build.sh script
+          bash build.sh $BUILD_CONFIG
+
+      - name: Upload built images (if any)
+        uses: actions/upload-artifact@v4
+        with:
+          name: built-images
+          path: |
+            workspace/kernel_platform/msm-kernel/out/dist/*.img
+            workspace/kernel_platform/msm-kernel/out/dist/*.zip
