@@ -10,6 +10,8 @@ jobs:
     steps:
       - name: Checkout this repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # shallow checkout to save space
 
       - name: Install dependencies
         run: |
@@ -20,33 +22,30 @@ jobs:
             cpio libncurses5-dev libncurses-dev \
             python-is-python3
 
-    
+      - name: Check disk space before cleanup
+        run: df -h
+
       - name: Free up disk space
-  run: |
-    sudo rm -rf /usr/share/dotnet
-    sudo rm -rf /opt/ghc
-    sudo rm -rf /usr/local/share/boost
-    sudo rm -rf /usr/local/lib/android
-    sudo apt-get clean
-    df -h
-      
-      
-       - name: Set up repo and sync sources
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/local/lib/android
+          sudo apt-get clean
+          df -h
+
+      - name: Set up repo and sync sources
         run: |
           mkdir workspace && cd workspace
-          # Save manifest for repo init
           cp $GITHUB_WORKSPACE/manifest.xml .
-          # Initialize repo with your manifest
           repo init -u https://github.com/ben443/orange-fox-gts8.git -m manifest.xml
           repo sync -c --no-tags --no-clone-bundle -j$(nproc --all)
 
       - name: Build kernel/recovery
         run: |
           cd workspace/kernel_platform/msm-kernel
-          # If you need to use a specific build config:
           export BUILD_CONFIG=../../common/build.config.msm.waipio
           cd ../build
-          # Start the build using the standard build.sh script
           bash build.sh $BUILD_CONFIG
 
       - name: Upload built images (if any)
@@ -56,3 +55,7 @@ jobs:
           path: |
             workspace/kernel_platform/msm-kernel/out/dist/*.img
             workspace/kernel_platform/msm-kernel/out/dist/*.zip
+
+      - name: Check disk space after build
+        if: always()
+        run: df -h
